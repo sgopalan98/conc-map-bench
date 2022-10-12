@@ -34,7 +34,7 @@ bench ReadHeavy fx
 bench Exchange fx '-o 0.5' # because of OOM in case of `flurry`
 bench RapidGrow fx
 
-bench ReadHeavy std
-bench Exchange std '-o 0.5'
-bench RapidGrow std
+# bench ReadHeavy std
+# bench Exchange std '-o 0.5'
+# bench RapidGrow std
 date

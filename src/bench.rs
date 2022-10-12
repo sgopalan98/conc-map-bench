@@ -5,6 +5,7 @@ use bustle::*;
 use fxhash::FxBuildHasher;
 use structopt::StructOpt;
 
+use crate::adapters::striped::StripedHashMapTable;
 use crate::{adapters::*, record::Record, workloads};
 
 #[derive(Debug, StructOpt)]
@@ -61,7 +62,7 @@ where
         .threads
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| (1..(num_cpus::get() * 3 / 2) as u32).collect());
+        .unwrap_or_else(|| (1..15 as u32).collect());
 
     let mut first_throughput = None;
 
@@ -97,6 +98,7 @@ fn run(options: &Options, h: &mut Handler) {
         case::<DashMapTable<u64, FxBuildHasher>>("FxDashMap", options, h);
         case::<FlurryTable<u64, FxBuildHasher>>("FxFlurry", options, h);
         case::<EvmapTable<u64, FxBuildHasher>>("FxEvmap", options, h);
+        case::<StripedHashMapTable>("StripedHashMap", options, h);
     }
 }
 
