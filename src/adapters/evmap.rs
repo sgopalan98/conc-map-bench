@@ -77,4 +77,8 @@ where
         self.wr.lock().update(*key, val).refresh();
         prev
     }
+
+    fn finish(&mut self) {
+        
+    }
 }

@@ -6,7 +6,6 @@ edition = "2018"
 publish = false
 
 [dependencies]
-bustle = "0.4.2"
 tracing-subscriber = "0.3.3"
 num_cpus = "1.13.0"
 fxhash = "0.2.1"
@@ -19,6 +18,7 @@ parking_lot = "0.11.2"
 evmap = "10.0.2"
 seize = "0.2.1"
 crossbeam-skiplist = { git = "https://github.com/crossbeam-rs/crossbeam" }
+bustle = { git = "https://github.com/sgopalan98/bustle" }
 structopt = "0.3.25"
 json = "0.12.4"
 csv = "1.1.6"

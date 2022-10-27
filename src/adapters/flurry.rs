@@ -57,4 +57,9 @@ where
             .compute_if_present(key, |_, v| Some(v + 1))
             .is_some()
     }
+
+    fn finish(&mut self) {
+        
+        
+    }
 }

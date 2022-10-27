@@ -48,4 +48,9 @@ impl CollectionHandle for StripedHashMapTable {
         }
     }
 
+    fn finish(&mut self) {
+        
+        
+    }
+
 }

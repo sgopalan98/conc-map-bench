@@ -46,4 +46,8 @@ where
         let mut map = self.0.write();
         map.get_mut(key).map(|v| *v += 1).is_some()
     }
+
+    fn finish(&mut self) {
+        
+    }
 }
