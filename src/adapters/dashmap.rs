@@ -4,9 +4,6 @@ use std::net::TcpStream;
 use std::sync::Arc;
 
 use bustle::*;
-use dashmap::DashMap;
-
-use super::Value;
 
 pub struct DashMapTable<K>(TcpStream, K);
 
@@ -20,6 +17,8 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
         let command = format!("RESET {} 0\n", 0);
         write_string(&mut stream, command);
+        let result = read_command(&mut stream);
+        assert!(result.eq("0"));
         Self(stream, 0.into())
     }
 
