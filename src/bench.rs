@@ -97,6 +97,7 @@ fn run(options: &Options, h: &mut Handler) {
         case::<DashMapTable<u64, FxBuildHasher>>("FxDashMap", options, h);
         case::<FlurryTable<u64, FxBuildHasher>>("FxFlurry", options, h);
         case::<EvmapTable<u64, FxBuildHasher>>("FxEvmap", options, h);
+        case::<StripedMapTable>("Striped map table", options, h);
     }
 }
 
