@@ -1,8 +1,0 @@
-name,total_ops,threads,spent,throughput,latency
-FxDashMap,512,1,6585504375,77.74651277184824,12862313
-FxDashMap,512,2,2879130258,177.8314817738267,11246602
-thread '<unnamed>' panicked at 'called `Result::unwrap()` on an `Err` value: Os { code: 54, kind: ConnectionReset, message: "Connection reset by peer" }', src/adapters/dashmap.rs:36:34
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-thread '<unnamed>' panicked at 'called `Result::unwrap()` on an `Err` value: Os { code: 54, kind: ConnectionReset, message: "Connection reset by peer" }', src/adapters/dashmap.rs:36:34
-thread '<unnamed>' panicked at 'called `Result::unwrap()` on an `Err` value: Os { code: 54, kind: ConnectionReset, message: "Connection reset by peer" }', src/adapters/dashmap.rs:36:34
-thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Any { .. }', /Users/santy/.cargo/git/checkouts/bustle-15d1ac03d5fa7f4c/5746b0d/src/lib.rs:362:33
