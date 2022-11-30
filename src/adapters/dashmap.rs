@@ -1,11 +1,23 @@
 use std::hash::{BuildHasher, Hash};
-use std::io::{BufReader, BufWriter, Write, BufRead};
+use std::io::BufReader;
 use std::net::TcpStream;
-use std::sync::Arc;
+use std::io::BufRead;
+// use std::net::TcpStream;
+// use std::sync::Arc;
 
 use bustle::*;
 
-pub struct DashMapTable<K>(TcpStream, K);
+use hashmap_server_mod::hash_map_client::HashMapClient;
+use hashmap_server_mod::{HashMapRequest, HashMapReply};
+use tonic::transport::Channel;
+use futures::executor::block_on;
+
+
+pub mod hashmap_server_mod {
+    tonic::include_proto!("hashmap");
+}
+
+pub struct DashMapTable<K>(HashMapClient<Channel>, K);
 
 impl<K> Collection for DashMapTable<K>
 where
@@ -15,17 +27,20 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 
     fn with_capacity(capacity: usize) -> Self {
         let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let command = format!("RESET {} 0\n", 0);
-        write_string(&mut stream, command);
         let result = read_command(&mut stream);
-        assert!(result.eq("0"));
-        Self(stream, 0.into())
+        let addr = format!("http://{}", result);
+        println!("ADDR IS {}", addr);
+        let mut client = block_on(HashMapClient::connect(result)).unwrap();
+        Self(client, 0.into())
     }
 
     fn pin(&self) -> Self::Handle {
-        let stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let mut reader = BufReader::new(stream.try_clone().unwrap());
-        Self(stream, 0.into())
+        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
+        let result = read_command(&mut stream);
+        let addr = format!("http://{}", result);
+        println!("ADDR IS {}", addr);
+        let mut client = block_on(HashMapClient::connect(result)).unwrap();
+        Self(client, 0.into())
     }
 }
 
@@ -37,47 +52,54 @@ pub fn read_command(stream: &mut TcpStream) -> String{
     return input;
 }
 
-pub fn write_string(stream: &mut TcpStream, output: String) {
-    stream.write(output.as_bytes()).unwrap();
-}
 
 impl<K> CollectionHandle for DashMapTable<K>
 where
 K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 {
-    type Key = u128;
+    type Key = u64;
 
     fn get(&mut self, key: &Self::Key) -> bool {
-        let command = format!("GET {} 0\n", key);
-        write_string(&mut self.0, command);
-        let result = read_command(&mut self.0);
-        result.eq("0")
+        // let command = format!("GET {} 0\n", key);
+        // write_string(&mut self.0, command);
+        // let result = read_command(&mut self.0);
+        // result.eq("0")
+        let request = tonic::Request::new(HashMapRequest{
+            key: *key as i64,
+        });
+        let response = block_on(self.0.get(request)).unwrap();
+        response.into_inner().error_code
+
     }
 
     fn insert(&mut self, key: &Self::Key) -> bool {
-        let command = format!("INSERT {} {}\n", key, 0);
-        write_string(&mut self.0, command);
-        let result = read_command(&mut self.0);
-        result.eq("0")
+        let request = tonic::Request::new(HashMapRequest{
+            key: *key as i64,
+        });
+        let response = block_on(self.0.insert(request)).unwrap();
+        response.into_inner().error_code
     }
 
     fn remove(&mut self, key: &Self::Key) -> bool {
-        let command = format!("REMOVE {} 0\n", key);
-        write_string(&mut self.0, command);
-        let result = read_command(&mut self.0);
-        result.eq("0")
+        let request = tonic::Request::new(HashMapRequest{
+            key: *key as i64,
+        });
+        let response = block_on(self.0.remove(request)).unwrap();
+        response.into_inner().error_code
     }
 
     fn update(&mut self, key: &Self::Key) -> bool {
-        let command = format!("UPDATE {} 0\n", key);
-        write_string(&mut self.0, command);
-        let result = read_command(&mut self.0);
-        result.eq("0")
+        let request = tonic::Request::new(HashMapRequest{
+            key: *key as i64,
+        });
+        let response = block_on(self.0.update(request)).unwrap();
+        response.into_inner().error_code
     }
 
     fn finish(&mut self) {
-        println!("CALLING FINISH");
-        let command = format!("FINISH {} 0\n", 0);
-        write_string(&mut self.0, command);
+        let request = tonic::Request::new(HashMapRequest{
+            key: 0,
+        });
+        let response = block_on(self.0.reset(request)).unwrap();
     }
 }

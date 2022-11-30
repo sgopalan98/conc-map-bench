@@ -5,6 +5,9 @@ authors = ["Acrimon <joel.wejdenstal@gmail.com>"]
 edition = "2018"
 publish = false
 
+[build-dependencies]
+tonic-build = "0.8"
+
 [dependencies]
 tracing-subscriber = "0.3.3"
 num_cpus = "1.13.0"
@@ -24,6 +27,10 @@ json = "0.12.4"
 csv = "1.1.6"
 serde = { version = "1.0.131", features = ["derive"] }
 plotters = "0.3.1"
+tonic = "0.8"
+prost = "0.11"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+futures = "0.3"
 
 [profile.release]
 codegen-units = 1
