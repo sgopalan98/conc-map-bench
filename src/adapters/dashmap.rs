@@ -9,6 +9,7 @@ use bustle::*;
 
 use hashmap_server_mod::hash_map_client::HashMapClient;
 use hashmap_server_mod::{HashMapRequest, HashMapReply};
+use tokio::runtime::Runtime;
 use tonic::transport::Channel;
 use futures::executor::block_on;
 
@@ -17,7 +18,7 @@ pub mod hashmap_server_mod {
     tonic::include_proto!("hashmap");
 }
 
-pub struct DashMapTable<K>(HashMapClient<Channel>, K);
+pub struct DashMapTable<K>(Runtime, HashMapClient<Channel>, K);
 
 impl<K> Collection for DashMapTable<K>
 where
@@ -26,21 +27,35 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
     type Handle = Self;
 
     fn with_capacity(capacity: usize) -> Self {
-        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let result = read_command(&mut stream);
-        let addr = format!("http://{}", result);
-        println!("ADDR IS {}", addr);
-        let mut client = block_on(HashMapClient::connect(result)).unwrap();
-        Self(client, 0.into())
+        // let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
+        // let result = read_command(&mut stream);
+        // let addr = format!("http://{}", result);
+        let addr = "http://[::1]:50051";
+        // println!("ADDR IS {}", addr);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+        let client = runtime
+        .block_on(HashMapClient::connect(addr)).unwrap();
+        // let mut client = block_on(HashMapClient::connect(addr)).unwrap();
+        Self(runtime, client, 0.into())
     }
 
     fn pin(&self) -> Self::Handle {
-        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let result = read_command(&mut stream);
-        let addr = format!("http://{}", result);
-        println!("ADDR IS {}", addr);
-        let mut client = block_on(HashMapClient::connect(result)).unwrap();
-        Self(client, 0.into())
+        // let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
+        // let result = read_command(&mut stream);
+        // let addr = format!("http://{}", result);
+        let addr = "http://[::1]:50051";
+        // println!("ADDR IS {}", addr);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+        let client = runtime
+        .block_on(HashMapClient::connect(addr)).unwrap();
+        // let mut client = block_on(HashMapClient::connect(addr)).unwrap();
+        Self(runtime, client, 0.into())
     }
 }
 
@@ -67,7 +82,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let request = tonic::Request::new(HashMapRequest{
             key: *key as i64,
         });
-        let response = block_on(self.0.get(request)).unwrap();
+        let response = self.0.block_on(self.1.get(request)).unwrap();
         response.into_inner().error_code
 
     }
@@ -76,7 +91,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let request = tonic::Request::new(HashMapRequest{
             key: *key as i64,
         });
-        let response = block_on(self.0.insert(request)).unwrap();
+        let response = self.0.block_on(self.1.insert(request)).unwrap();
         response.into_inner().error_code
     }
 
@@ -84,7 +99,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let request = tonic::Request::new(HashMapRequest{
             key: *key as i64,
         });
-        let response = block_on(self.0.remove(request)).unwrap();
+        let response = self.0.block_on(self.1.remove(request)).unwrap();
         response.into_inner().error_code
     }
 
@@ -92,7 +107,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let request = tonic::Request::new(HashMapRequest{
             key: *key as i64,
         });
-        let response = block_on(self.0.update(request)).unwrap();
+        let response = self.0.block_on(self.1.update(request)).unwrap();
         response.into_inner().error_code
     }
 
@@ -100,6 +115,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let request = tonic::Request::new(HashMapRequest{
             key: 0,
         });
-        let response = block_on(self.0.reset(request)).unwrap();
+        let response = self.0.block_on(self.1.reset(request)).unwrap();
+        // let response = block_on(self.0.reset(request)).unwrap();
     }
 }
