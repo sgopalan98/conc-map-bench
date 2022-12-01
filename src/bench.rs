@@ -61,7 +61,7 @@ where
         .threads
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| (1..15 as u32).collect());
+        .unwrap_or_else(|| (1..16 as u32).collect());
 
     let mut first_throughput = None;
 
