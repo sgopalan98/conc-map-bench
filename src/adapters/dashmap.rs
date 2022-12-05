@@ -15,10 +15,10 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 
     fn with_capacity(capacity: usize) -> Self {
         let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let command = format!("RESET {} 0\n", 0);
-        write_string(&mut stream, command);
-        let result = read_command(&mut stream);
-        assert!(result.eq("0"));
+        // let command = format!("RESET {} 0\n", 0);
+        // write_string(&mut stream, command);
+        // let result = read_command(&mut stream);
+        // assert!(result.eq("0"));
         Self(stream, 0.into())
     }
 
@@ -75,9 +75,22 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         result.eq("0")
     }
 
-    fn finish(&mut self) {
-        println!("CALLING FINISH");
-        let command = format!("FINISH {} 0\n", 0);
+    fn clear(&mut self) {
+        println!("CALLING CLEAR");
+        let command = format!("CLEAR {} 0\n", 0);
+        write_string(&mut self.0, command);
+        let result = read_command(&mut self.0);
+        result.eq("0");
+    }
+
+    fn close(&mut self) {
+        println!("CALLING CLOSE");
+        let command = format!("CLOSE {} 0\n", 0);
         write_string(&mut self.0, command);
     }
+    // fn finish(&mut self) {
+        // println!("CALLING FINISH");
+        // let command = format!("FINISH {} 0\n", 0);
+        // write_string(&mut self.0, command);
+    // }
 }

@@ -5,7 +5,6 @@ use bustle::*;
 use fxhash::FxBuildHasher;
 use structopt::StructOpt;
 
-use crate::adapters::striped::StripedHashMapTable;
 use crate::{adapters::*, record::Record, workloads};
 
 #[derive(Debug, StructOpt)]
