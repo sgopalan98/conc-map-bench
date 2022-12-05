@@ -14,6 +14,8 @@ pub struct Options {
     pub workload: workloads::WorkloadKind,
     #[structopt(short, long, default_value = "1")]
     pub operations: f64,
+    #[structopt(short, default_value = "15")]
+    pub capacity: u8,
     #[structopt(long)]
     pub threads: Option<Vec<u32>>,
     #[structopt(long)]
@@ -62,7 +64,7 @@ where
         .threads
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| (1..16 as u32).collect());
+        .unwrap_or_else(|| (1..(num_cpus::get() * 3 / 2) as u32).collect());
 
     let mut first_throughput = None;
 

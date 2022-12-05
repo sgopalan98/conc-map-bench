@@ -24,7 +24,7 @@ impl FromStr for WorkloadKind {
     }
 }
 
-fn read_heavy(threads: u32) -> Workload {
+fn read_heavy(threads: u32, capacity: u8) -> Workload {
     let mix = Mix {
         read: 98,
         insert: 1,
@@ -34,11 +34,11 @@ fn read_heavy(threads: u32) -> Workload {
     };
 
     *Workload::new(threads as usize, mix)
-        .initial_capacity_log2(20)
+        .initial_capacity_log2(capacity)
         .prefill_fraction(0.8)
 }
 
-fn rapid_grow(threads: u32) -> Workload {
+fn rapid_grow(threads: u32, capacity: u8) -> Workload {
     let mix = Mix {
         read: 5,
         insert: 80,
@@ -48,11 +48,11 @@ fn rapid_grow(threads: u32) -> Workload {
     };
 
     *Workload::new(threads as usize, mix)
-        .initial_capacity_log2(20)
+        .initial_capacity_log2(capacity)
         .prefill_fraction(0.0)
 }
 
-fn exchange(threads: u32) -> Workload {
+fn exchange(threads: u32, capacity: u8) -> Workload {
     let mix = Mix {
         read: 10,
         insert: 40,
@@ -62,15 +62,15 @@ fn exchange(threads: u32) -> Workload {
     };
 
     *Workload::new(threads as usize, mix)
-        .initial_capacity_log2(20)
+        .initial_capacity_log2(capacity)
         .prefill_fraction(0.8)
 }
 
 pub(crate) fn create(options: &Options, threads: u32) -> Workload {
     let mut workload = match options.workload {
-        WorkloadKind::ReadHeavy => read_heavy(threads),
-        WorkloadKind::Exchange => exchange(threads),
-        WorkloadKind::RapidGrow => rapid_grow(threads),
+        WorkloadKind::ReadHeavy => read_heavy(threads, options.capacity),
+        WorkloadKind::Exchange => exchange(threads, options.capacity),
+        WorkloadKind::RapidGrow => rapid_grow(threads, options.capacity),
     };
 
     workload.operations(options.operations);

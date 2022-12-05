@@ -9,7 +9,7 @@ cargo build --release
 mkdir -p "$OUT"
 
 function bench {
-    ARGS=$3
+    ARGS=$4
 
     if [ "$2" = "std" ]; then
         ARGS+=" --use-std-hasher"
@@ -25,16 +25,16 @@ function bench {
 
     skip=$(cat "$file" | cut -d, -f1 | uniq | paste -sd ' ' -)
 
-    if ! "$BIN" bench -w $1 $ARGS --skip $skip --csv 2>>"$file"; then
-        bench "$1" "$2" "$3"
+    if ! "$BIN" bench -w $1 -c $3 $ARGS --skip $skip --csv 2>>"$file"; then
+        bench "$1" "$2" "$3" "$4"
     fi
 }
 
-bench ReadHeavy fx
-bench Exchange fx '-o 0.5' # because of OOM in case of `flurry`
-bench RapidGrow fx
+bench ReadHeavy fx 20
+bench Exchange fx 20 '-o 0.5' # because of OOM in case of `flurry`
+bench RapidGrow fx 20
 
-# bench ReadHeavy std
-# bench Exchange std '-o 0.5'
-# bench RapidGrow std
+bench ReadHeavy std 20
+bench Exchange std 20 '-o 0.5'
+bench RapidGrow std 20
 date
