@@ -63,7 +63,7 @@ where
         .threads
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| (1..(num_cpus::get() * 3 / 2) as u32).collect());
+        .unwrap_or_else(|| (1..(num_cpus::get() * 3 / 4) as u32).collect());
 
     let mut first_throughput = None;
 

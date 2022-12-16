@@ -77,7 +77,7 @@ fn plot_throughput(options: &Options, groups: &Groups) -> Result<(), Box<dyn Err
         .configure_mesh()
         .disable_y_mesh()
         .x_label_formatter(&|v| format!("{}", v))
-        .y_label_formatter(&|v| format!("{:.0} Mop/s", v / 1_000_000.))
+        .y_label_formatter(&|v| format!("{:.2} Mop/s", v / 1_000_000.))
         .x_labels(20)
         .y_desc("Throughput")
         .x_desc("Threads")
