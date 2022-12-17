@@ -30,11 +30,11 @@ function bench {
     fi
 }
 
-bench ReadHeavy fx 20
-bench Exchange fx 20 '-o 0.5' # because of OOM in case of `flurry`
-bench RapidGrow fx 20
+bench ReadHeavy fx 22
+bench Exchange fx 22 '-o 0.5' # because of OOM in case of `flurry`
+bench RapidGrow fx 22
 
-bench ReadHeavy std 20
-bench Exchange std 20 '-o 0.5'
-bench RapidGrow std 20
+bench ReadHeavy std 22
+bench Exchange std 22 '-o 0.5'
+bench RapidGrow std 22
 date

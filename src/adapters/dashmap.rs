@@ -1,8 +1,6 @@
-use std::hash::{BuildHasher, Hash};
-use std::io::{BufReader, BufWriter, Write, BufRead};
+use std::hash::Hash;
+use std::io::{BufReader, Write, BufRead};
 use std::net::TcpStream;
-use std::ptr::null;
-use std::sync::Arc;
 
 use bustle::*;
 
@@ -14,14 +12,13 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 {
     type Handle = Self;
 
-    fn with_capacity(capacity: usize) -> Self {
+    fn with_capacity(_capacity: usize) -> Self {
 
         Self(None, 0.into())
     }
 
     fn pin(&self) -> Self::Handle {
         let stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let mut reader = BufReader::new(stream.try_clone().unwrap());
         Self(Some(stream), 0.into())
     }
 }
