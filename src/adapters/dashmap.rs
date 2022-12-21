@@ -13,7 +13,14 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
     type Handle = Self;
 
     fn with_capacity(_capacity: usize) -> Self {
+        Self(None, 0.into())
+    }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
+        let command = format!("{} {}\n", capacity, no_of_threads);
+        write_string(&mut stream, command);
+        drop(stream);
         Self(None, 0.into())
     }
 

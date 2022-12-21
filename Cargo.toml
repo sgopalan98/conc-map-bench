@@ -18,7 +18,7 @@ parking_lot = "0.11.2"
 evmap = "10.0.2"
 seize = "0.2.1"
 crossbeam-skiplist = { git = "https://github.com/crossbeam-rs/crossbeam" }
-bustle = { git = "https://github.com/sgopalan98/bustle", branch = "fixing_thread_bug" }
+bustle = { git = "https://github.com/sgopalan98/bustle", branch = "with_threads_in_constructor" }
 structopt = "0.3.25"
 json = "0.12.4"
 csv = "1.1.6"
