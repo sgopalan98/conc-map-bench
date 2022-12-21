@@ -15,6 +15,8 @@ pub struct Options {
     pub operations: f64,
     #[structopt(short, default_value = "15")]
     pub capacity: u8,
+    #[structopt(short, long, default_value = "1")]
+    pub times: u8,
     #[structopt(long)]
     pub threads: Option<Vec<u32>>,
     #[structopt(long)]
@@ -40,7 +42,7 @@ fn gc_cycle(options: &Options) {
     }
 }
 
-type Handler = Box<dyn FnMut(&str, u32, &Measurement)>;
+type Handler = Box<dyn FnMut(&str, u8, u32, &Measurement)>;
 
 fn case<C>(name: &str, options: &Options, handler: &mut Handler)
 where
@@ -67,19 +69,23 @@ where
 
     let mut first_throughput = None;
 
-    for n in &threads {
-        let m = workloads::create(options, *n).run_silently::<C>();
-        handler(name, *n, &m);
+    let times = options.times;
 
-        if !options.complete_slow {
-            let threshold = *first_throughput.get_or_insert(m.throughput) / 5.;
-            if m.throughput <= threshold {
-                println!("too long, skipped");
-                break;
+    for no in 1..=times {
+        for n in &threads {
+            let m = workloads::create(options, *n).run_silently::<C>();
+            handler(name, no, *n, &m);
+
+            if !options.complete_slow {
+                let threshold = *first_throughput.get_or_insert(m.throughput) / 5.;
+                if m.throughput <= threshold {
+                    println!("too long, skipped");
+                    break;
+                }
             }
-        }
 
-        gc_cycle(options);
+            gc_cycle(options);
+        }
     }
     println!();
 }
@@ -111,9 +117,10 @@ pub fn bench(options: &Options) {
             .has_headers(!options.csv_no_headers)
             .from_writer(io::stderr());
 
-        Box::new(move |name: &str, n, m: &Measurement| {
+        Box::new(move |name: &str, no: u8, n, m: &Measurement| {
             wr.serialize(Record {
                 name: name.into(),
+                no,
                 total_ops: m.total_ops,
                 threads: n,
                 spent: m.spent,
@@ -124,11 +131,11 @@ pub fn bench(options: &Options) {
             wr.flush().expect("cannot flush");
         }) as Handler
     } else {
-        Box::new(|_: &str, n, m: &Measurement| {
+        Box::new(|_: &str, no, n, m: &Measurement| {
             eprintln!(
-                "total_ops={}\tthreads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
-                m.total_ops, n, m.spent, m.latency, m.throughput,
-            );
+                "experiment_no={}\ttotal_ops={}\tthreads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
+                no, m.total_ops, n, m.spent, m.latency, m.throughput,
+            )
         }) as Handler
     };
 

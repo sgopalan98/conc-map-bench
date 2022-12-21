@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Record {
     pub name: String,
+    pub no: u8,
     pub total_ops: u64,
     pub threads: u32,
     #[serde(with = "timestamp")]
