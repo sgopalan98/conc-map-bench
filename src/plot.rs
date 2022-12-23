@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, error::Error, io, path::PathBuf, time::Duration};
+use std::{collections::{BTreeMap, HashMap}, error::Error, io, path::PathBuf, time::Duration};
 
 use plotters::prelude::*;
 use structopt::StructOpt;
@@ -38,13 +38,45 @@ fn read_data() -> Vec<Record> {
 }
 
 type Groups = BTreeMap<String, Vec<Record>>;
+type ThreadGroups = BTreeMap<u32, Vec<Record>>;
+
+
+fn average(records: &Vec<Record>) -> (f64, Duration) {
+    let throughputs: Vec<f64> = records.iter().map(|record| record.throughput).collect();
+    let latencies: Vec<u128> = records.iter().map(|record| record.latency.as_millis()).collect();
+    let throughput_average: f64 = throughputs.iter().sum::<f64>() as f64 / throughputs.iter().len() as f64;
+    let latency_average: Duration = Duration::from_millis(latencies.iter().sum::<u128>() as u64 / latencies.iter().len() as u64);
+    return (throughput_average, latency_average);
+}
+
 
 fn group_data(records: Vec<Record>) -> Groups {
-    let mut groups = Groups::new();
+    let mut inter_groups = Groups::new();
 
     for record in records {
-        let group = groups.entry(record.name.clone()).or_insert_with(Vec::new);
+        let group = inter_groups.entry(record.name.clone()).or_insert_with(Vec::new);
         group.push(record);
+    }
+
+    let mut groups = Groups::new();
+
+
+    for (name, records) in inter_groups {
+        let mut thread_groups = ThreadGroups::new();
+        for record in records {
+            let group = thread_groups.entry(record.threads.clone()).or_insert_with(Vec::new);
+            group.push(record);
+        }
+        for (threads, records) in thread_groups {
+            let average_values = average(&records);
+            let average_throughput = average_values.0;
+            let average_latency = average_values.1;
+            
+            let first_record = records.get(0).unwrap();
+            let average_record = Record{ name: name.clone(), no: first_record.no, total_ops: first_record.total_ops, threads, spent: first_record.spent, throughput: average_throughput, latency: average_latency };
+            let group = groups.entry(name.clone()).or_insert_with(Vec::new);
+            group.push(average_record);
+        }
     }
 
     groups
@@ -58,6 +90,8 @@ fn plot_throughput(options: &Options, groups: &Groups) -> Result<(), Box<dyn Err
     let root = SVGBackend::new(&path, resolution).into_drawing_area();
 
     root.fill(&WHITE)?;
+
+
 
     let (x_max, y_max) = groups
         .values()
