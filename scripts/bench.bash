@@ -25,16 +25,21 @@ function bench {
 
     skip=$(cat "$file" | cut -d, -f1 | uniq | paste -sd ' ' -)
 
-    if ! "$BIN" bench -w $1 -c $3 $ARGS --skip $skip --csv 2>>"$file"; then
+    threads=( $(seq 1 $3 ) )
+
+    if ! "$BIN" bench -w $1 --threads ${threads[@]} $ARGS --skip $skip --csv 2>>"$file"; then
         bench "$1" "$2" "$3" "$4"
     fi
 }
 
-bench ReadHeavy fx 20
-bench Exchange fx 20 '-o 0.5' # because of OOM in case of `flurry`
-bench RapidGrow fx 20
+no_threads=168
+capacity=22
+times=10
+bench ReadHeavy fx $no_threads "-c $capacity -t $times"
+bench Exchange fx $no_threads "-o 0.5 -c $capacity -t $times" # because of OOM in case of `flurry`
+bench RapidGrow fx $no_threads "-c $capacity -t $times"
 
-bench ReadHeavy std 20
-bench Exchange std 20 '-o 0.5'
-bench RapidGrow std 20
+bench ReadHeavy std $no_threads "-c $capacity -t $times"
+bench Exchange std $no_threads "-o 0.5 -c $capacity -t $times"
+bench RapidGrow std $no_threads "-c $capacity -t $times"
 date
