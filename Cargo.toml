@@ -20,10 +20,11 @@ evmap = "10.0.2"
 seize = "0.2.1"
 crossbeam-skiplist = { git = "https://github.com/crossbeam-rs/crossbeam" }
 striped_hashmap = { git = "https://github.com/sgopalan98/StripedHashTable" } 
+leapfrog = { git = "https://github.com/robclu/leapfrog" }
 structopt = "0.3.25"
 json = "0.12.4"
 csv = "1.1.6"
-serde = { version = "1.0.131", features = ["derive"] }
+serde = { version = "1.0.136", features = ["derive"] }
 plotters = "0.3.1"
 
 [profile.release]
