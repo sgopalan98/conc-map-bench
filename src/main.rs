@@ -7,7 +7,6 @@ mod bench;
 mod plot;
 mod record;
 mod workloads;
-mod hashmaps;
 
 #[derive(Debug, StructOpt)]
 enum Options {
