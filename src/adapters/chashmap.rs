@@ -18,6 +18,10 @@ where
         Self(Arc::new(CHashMap::with_capacity(capacity)))
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        Self(Arc::new(CHashMap::with_capacity(capacity)))
+    }
+
     fn pin(&self) -> Self::Handle {
         self.clone()
     }
@@ -50,7 +54,7 @@ where
             .is_some()
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
         
         
     }

@@ -18,6 +18,10 @@ where
         Self(Arc::new(SkipMap::new()))
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        Self(Arc::new(SkipMap::new()))
+    }
+
     fn pin(&self) -> Self::Handle {
         Self(self.0.clone())
     }
@@ -53,7 +57,7 @@ where
             .is_some()
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
         
     }
 }

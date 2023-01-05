@@ -19,6 +19,10 @@ where
         Self(Arc::new(RwLock::new(BTreeMap::new())))
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        Self(Arc::new(RwLock::new(BTreeMap::new())))
+    }
+
     fn pin(&self) -> Self::Handle {
         self.clone()
     }
@@ -47,7 +51,7 @@ where
         map.get_mut(key).map(|v| *v += 1).is_some()
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
         
     }
 }

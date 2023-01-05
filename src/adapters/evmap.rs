@@ -31,6 +31,18 @@ where
         }
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        let (rd, wr) = evmap::Options::default()
+            .with_hasher(H::default())
+            .with_capacity(capacity)
+            .construct();
+
+        Self {
+            rd: Arc::new(Mutex::new(rd)),
+            wr: Arc::new(Mutex::new(wr)),
+        }
+    }
+
     fn pin(&self) -> Self::Handle {
         EvmapTableHandle {
             rd: self.rd.lock().clone(),
@@ -78,7 +90,7 @@ where
         prev
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
         
     }
 }

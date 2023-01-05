@@ -27,6 +27,16 @@ where
         ))
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        Self(Arc::new(
+            flurry::HashMap::with_capacity_and_hasher(capacity, H::default()).with_collector(
+                Collector::new()
+                    .epoch_frequency(None)
+                    .batch_size(BATCH_SIZE),
+            ),
+        ))
+    }
+
     fn pin(&self) -> Self::Handle {
         self.clone()
     }
@@ -58,7 +68,7 @@ where
             .is_some()
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
         
         
     }

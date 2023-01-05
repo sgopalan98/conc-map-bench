@@ -21,6 +21,10 @@ where
         Self(Arc::new(ConMap::with_hasher(H::default())))
     }
 
+    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+        Self(Arc::new(ConMap::with_hasher(H::default())))
+    }
+
     fn pin(&self) -> Self::Handle {
         self.clone()
     }
@@ -54,7 +58,7 @@ where
             .is_some()
     }
 
-    fn finish(&mut self) {
+    fn close(&mut self) {
     
     }
 }

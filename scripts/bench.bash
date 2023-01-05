@@ -33,7 +33,7 @@ function bench {
 }
 
 no_threads=84
-capacity=11
+capacity=22
 times=10
 bench ReadHeavy fx $no_threads "-c $capacity -t $times"
 bench Exchange fx $no_threads "-o 0.5 -c $capacity -t $times" # because of OOM in case of `flurry`

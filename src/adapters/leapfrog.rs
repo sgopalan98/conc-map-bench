@@ -2,14 +2,14 @@ use std::hash::{BuildHasher, Hash};
 use std::sync::Arc;
 
 use bustle::*;
-use dashmap::DashMap;
+use leapfrog::LeapMap;
 
 use super::Value;
 
 #[derive(Clone)]
-pub struct DashMapTable<K, H>(Arc<DashMap<K, Value, H>>);
+pub struct LeapfrogMapTable<K, H>(Arc<LeapMap<K, Value, H>>);
 
-impl<K, H> Collection for DashMapTable<K, H>
+impl<K, H> Collection for LeapfrogMapTable<K, H>
 where
     K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
     H: BuildHasher + Default + Send + Sync + 'static + Clone,
@@ -17,14 +17,14 @@ where
     type Handle = Self;
 
     fn with_capacity(capacity: usize) -> Self {
-        Self(Arc::new(DashMap::with_capacity_and_hasher(
+        Self(Arc::new(LeapMap::with_capacity_and_hasher(
             capacity,
             H::default(),
         )))
     }
 
     fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
-        Self(Arc::new(DashMap::with_capacity_and_hasher(
+        Self(Arc::new(LeapMap::with_capacity_and_hasher(
             capacity,
             H::default(),
         )))
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<K, H> CollectionHandle for DashMapTable<K, H>
+impl<K, H> CollectionHandle for LeapfrogMapTable<K, H>
 where
     K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
     H: BuildHasher + Default + Send + Sync + 'static + Clone,
@@ -43,7 +43,7 @@ where
     type Key = K;
 
     fn get(&mut self, key: &Self::Key) -> bool {
-        self.0.get(key).is_some()
+        self.0.get(&key).map_or(false, |_| true)
     }
 
     fn insert(&mut self, key: &Self::Key) -> bool {
@@ -55,7 +55,12 @@ where
     }
 
     fn update(&mut self, key: &Self::Key) -> bool {
-        self.0.get_mut(key).map(|mut v| *v += 1).is_some()
+        match self.0.get_mut(key) {
+            Some(mut val_ref) => return val_ref.update(|val: &mut Value| *val += 1).is_some(),
+            None => {
+                return false;
+            }
+        };
     }
 
     fn close(&mut self) {
