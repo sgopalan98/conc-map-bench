@@ -1,6 +1,7 @@
 use std::hash::Hash;
 use std::io::{BufReader, Write, BufRead};
 use std::net::TcpStream;
+use std::task::ready;
 
 use bustle::*;
 
@@ -85,6 +86,12 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         let command = operations.join(",");
         let final_command = format!("{}\n", command);
         write_string(&mut stream, final_command);
+        let result = read_command(&mut stream);
+        let results = vec![];
+        for result in result.split(",") {
+            results.push(result.eq("0"));
+        }
+        return results;
     }
 
     fn close(&mut self) {
