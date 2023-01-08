@@ -83,11 +83,12 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 
 
     fn execute(&mut self, operations: Vec<String>) -> Vec<bool> {
+        let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
         let command = operations.join(",");
         let final_command = format!("{}\n", command);
         write_string(&mut stream, final_command);
         let result = read_command(&mut stream);
-        let results = vec![];
+        let mut results = vec![];
         for result in result.split(",") {
             results.push(result.eq("0"));
         }
