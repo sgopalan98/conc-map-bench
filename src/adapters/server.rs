@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use std::io::{BufReader, Write, BufRead};
+use std::io::{BufReader, Write, BufRead, Read};
 use std::net::TcpStream;
 use std::task::ready;
 
@@ -47,57 +47,81 @@ impl<K> CollectionHandle for ServerTable<K>
 where
 K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
 {
-    type Key = u128;
+    type Key = u64;
 
     fn get(&mut self, key: &Self::Key) -> bool {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = format!("GET {} 0\n", key);
-        write_string(&mut stream, command);
-        let result = read_command(&mut stream);
-        result.eq("0")
+        let mut command = vec![0u8; 9];
+        command[0] = 1;
+        command.splice(1..9, key.to_be_bytes());
+        stream.write(&command);
+        let mut buf = vec![0u8; 1];
+        let result = stream.read_exact(&mut buf);
+        let error_code = buf[0];
+        error_code == 0
     }
 
     fn insert(&mut self, key: &Self::Key) -> bool {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = format!("INSERT {} {}\n", key, 0);
-        write_string(&mut stream, command);
-        let result = read_command(&mut stream);
-        result.eq("0")
+        let mut command = vec![0u8; 9];
+        command[0] = 2;
+        command.splice(1..9, key.to_be_bytes());
+        stream.write(&command);
+        let mut buf = vec![0u8; 1];
+        let result = stream.read_exact(&mut buf);
+        let error_code = buf[0];
+        error_code == 0
     }
 
     fn remove(&mut self, key: &Self::Key) -> bool {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = format!("REMOVE {} 0\n", key);
-        write_string(&mut stream, command);
-        let result = read_command(&mut stream);
-        result.eq("0")
+        let mut command = vec![0u8; 9];
+        command[0] = 3;
+        command.splice(1..9, key.to_be_bytes());
+        stream.write(&command);
+        let mut buf = vec![0u8; 1];
+        let result = stream.read_exact(&mut buf);
+        let error_code = buf[0];
+        error_code == 0
     }
 
     fn update(&mut self, key: &Self::Key) -> bool {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = format!("UPDATE {} 0\n", key);
-        write_string(&mut stream, command);
-        let result = read_command(&mut stream);
-        result.eq("0")
+        let mut command = vec![0u8; 9];
+        command[0] = 4;
+        command.splice(1..9, key.to_be_bytes());
+        stream.write(&command);
+        let mut buf = vec![0u8; 1];
+        let result = stream.read_exact(&mut buf);
+        let error_code = buf[0];
+        error_code == 0
     }
 
 
-    fn execute(&mut self, operations: Vec<String>) -> Vec<bool> {
+    fn execute(&mut self, operations: Vec<u8>, keys: Vec<&u64>) -> Vec<bool> {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = operations.join(",");
-        let final_command = format!("{}\n", command);
-        write_string(&mut stream, final_command);
-        let result = read_command(&mut stream);
+        let mut command = vec![0u8; 9 * 100];
+        for index in 0..operations.len() {
+           let start_index = 9 * index;
+           let end_index = 9 * index + 9;
+           command[9 * index] = operations[index];
+           command.splice((start_index + 1)..end_index, keys[index].to_be_bytes());
+        }
+        stream.write(&command);
+        let mut buf = vec![0u8; 100];
+        let result = stream.read_exact(&mut buf);
         let mut results = vec![];
-        for result in result.split(",") {
-            results.push(result.eq("0"));
+        for error_code in buf {
+            results.push(error_code == 0);
         }
         return results;
     }
 
     fn close(&mut self) {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let command = format!("CLOSE {} 0\n", 0);
-        write_string(&mut stream, command);
+        let command = vec![0u8; 9];
+        stream.write(&command); 
+        let mut buf = vec![0u8; 1];
+        let result = stream.read_exact(&mut buf);
     }
 }
