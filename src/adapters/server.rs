@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use std::io::{BufReader, Write, BufRead, Read};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::task::ready;
 
@@ -9,7 +9,7 @@ pub struct ServerTable<K>(Option<TcpStream>, K);
 
 impl<K> Collection for ServerTable<K>
 where
-K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
+    K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
 {
     type Handle = Self;
 
@@ -31,7 +31,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
     }
 }
 
-pub fn read_command(stream: &mut TcpStream) -> String{
+pub fn read_command(stream: &mut TcpStream) -> String {
     let mut input = String::new();
     let mut reader = BufReader::new(stream);
     reader.read_line(&mut input).unwrap();
@@ -45,7 +45,7 @@ pub fn write_string(stream: &mut TcpStream, output: String) {
 
 impl<K> CollectionHandle for ServerTable<K>
 where
-K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
+    K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
 {
     type Key = u64;
 
@@ -97,15 +97,14 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
         error_code == 0
     }
 
-
     fn execute(&mut self, operations: Vec<u8>, keys: Vec<&u64>) -> Vec<bool> {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
         let mut command = vec![0u8; 9 * 100];
         for index in 0..operations.len() {
-           let start_index = 9 * index;
-           let end_index = 9 * index + 9;
-           command[9 * index] = operations[index];
-           command.splice((start_index + 1)..end_index, keys[index].to_be_bytes());
+            let start_index = 9 * index;
+            let end_index = 9 * index + 9;
+            command[9 * index] = operations[index];
+            command.splice((start_index + 1)..end_index, keys[index].to_be_bytes());
         }
         stream.write(&command);
         let mut buf = vec![0u8; 100];
@@ -120,7 +119,7 @@ K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug
     fn close(&mut self) {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
         let command = vec![0u8; 9];
-        stream.write(&command); 
+        stream.write(&command);
         let mut buf = vec![0u8; 1];
         let result = stream.read_exact(&mut buf);
     }
