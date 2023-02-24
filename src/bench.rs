@@ -101,13 +101,13 @@ fn run(options: &Options, h: &mut Handler) {
         // case::<FlurryTable<u64, RandomState>>("Flurry", options, h);
         // case::<EvmapTable<u64, RandomState>>("Evmap", options, h);
         // case::<CHashMapTable<u64>>("CHashMap", options, h);
+        case::<StripedMapTable>("Striped map table", options, h);
     } else {
         // case::<RwLockStdHashMapTable<u64, FxBuildHasher>>("RwLock<FxHashMap>", options, h);
-        case::<LeapfrogMapTable<u64, FxBuildHasher>>("FxLeapfrogMap", options, h);
-        case::<DashMapTable<u64, FxBuildHasher>>("FxDashMap", options, h);
+        // case::<LeapfrogMapTable<u64, FxBuildHasher>>("FxLeapfrogMap", options, h);
+        // case::<DashMapTable<u64, FxBuildHasher>>("FxDashMap", options, h);
         // case::<FlurryTable<u64, FxBuildHasher>>("FxFlurry", options, h);
         // case::<EvmapTable<u64, FxBuildHasher>>("FxEvmap", options, h);
-        // case::<StripedMapTable>("Striped map table", options, h);
     }
 }
 
