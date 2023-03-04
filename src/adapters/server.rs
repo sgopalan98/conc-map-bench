@@ -5,7 +5,7 @@ use std::task::ready;
 
 use bustle::*;
 
-pub struct ServerTable<K>(Option<TcpStream>, K);
+pub struct ServerTable<K>(Option<TcpStream>, K, usize);
 
 impl<K> Collection for ServerTable<K>
 where
@@ -14,20 +14,28 @@ where
     type Handle = Self;
 
     fn with_capacity(_capacity: usize) -> Self {
-        Self(None, 0.into())
+        Self(None, 0.into(), 1)
     }
 
     fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
         let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let command = format!("{} {}\n", capacity, no_of_threads);
+        let command = format!("{} {} {}\n", capacity, no_of_threads, 1);
         write_string(&mut stream, command);
         drop(stream);
-        Self(None, 0.into())
+        Self(None, 0.into(), 1)
+    }
+
+    fn with_capacity_and_threads_and_ops_st(capacity: usize, no_of_threads: usize, ops_st: usize) -> Self {
+        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
+        let command = format!("{} {} {}\n", capacity, no_of_threads, ops_st);
+        write_string(&mut stream, command);
+        drop(stream);
+        Self(None, 0.into(), ops_st)
     }
 
     fn pin(&self) -> Self::Handle {
         let stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        Self(Some(stream), 0.into())
+        Self(Some(stream), 0.into(), self.2)
     }
 }
 
@@ -99,7 +107,7 @@ where
 
     fn execute(&mut self, operations: Vec<u8>, keys: Vec<&u64>) -> Vec<bool> {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let mut command = vec![0u8; 9 * 100];
+        let mut command = vec![0u8; 9 * self.2];
         for index in 0..operations.len() {
             let start_index = 9 * index;
             let end_index = 9 * index + 9;
@@ -107,7 +115,7 @@ where
             command.splice((start_index + 1)..end_index, keys[index].to_be_bytes());
         }
         stream.write(&command);
-        let mut buf = vec![0u8; 100];
+        let mut buf = vec![0u8; self.2];
         let result = stream.read_exact(&mut buf);
         let mut results = vec![];
         for error_code in buf {

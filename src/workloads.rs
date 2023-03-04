@@ -74,5 +74,6 @@ pub(crate) fn create(options: &Options, threads: u32) -> Workload {
     };
 
     workload.operations(options.operations);
+    workload.operations_at_a_stretch(options.ops_st);
     workload
 }

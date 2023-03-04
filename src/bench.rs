@@ -17,6 +17,8 @@ pub struct Options {
     pub capacity: u8,
     #[structopt(short, long, default_value = "1")]
     pub times: u8,
+    #[structopt(short, long, default_value = "1")]
+    pub ops_st: usize,
     #[structopt(long)]
     pub threads: Option<Vec<u32>>,
     #[structopt(long)]

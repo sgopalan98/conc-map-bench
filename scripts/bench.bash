@@ -32,14 +32,15 @@ function bench {
     fi
 }
 
-no_threads=84
-capacity=22
-times=10
-bench ReadHeavy fx $no_threads "-c $capacity -t $times"
-bench Exchange fx $no_threads "-o 0.5 -c $capacity -t $times" # because of OOM in case of `flurry`
-bench RapidGrow fx $no_threads "-c $capacity -t $times"
+no_threads=$1
+capacity=$2
+times=$3
+operations_stretch=$4
+bench ReadHeavy fx $no_threads "-c $capacity -t $times --ops-st $operations_stretch"
+bench Exchange fx $no_threads "-o 0.5 -c $capacity -t $times --ops-st $operations_stretch" # because of OOM in case of `flurry`
+bench RapidGrow fx $no_threads "-c $capacity -t $times --ops-st $operations_stretch"
 
-bench ReadHeavy std $no_threads "-c $capacity -t $times"
-bench Exchange std $no_threads "-o 0.5 -c $capacity -t $times"
-bench RapidGrow std $no_threads "-c $capacity -t $times"
+bench ReadHeavy std $no_threads "-c $capacity -t $times --ops-st $operations_stretch"
+bench Exchange std $no_threads "-o 0.5 -c $capacity -t $times --ops-st $operations_stretch"
+bench RapidGrow std $no_threads "-c $capacity -t $times --ops-st $operations_stretch"
 date
