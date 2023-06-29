@@ -66,14 +66,14 @@ fn exchange(threads: u32, capacity: u8) -> Workload {
         .prefill_fraction(0.8)
 }
 
-pub(crate) fn create(options: &Options, threads: u32) -> Workload {
+pub(crate) fn create(options: &Options) -> Workload {
     let mut workload = match options.workload {
-        WorkloadKind::ReadHeavy => read_heavy(threads, options.capacity),
-        WorkloadKind::Exchange => exchange(threads, options.capacity),
-        WorkloadKind::RapidGrow => rapid_grow(threads, options.capacity),
+        WorkloadKind::ReadHeavy => read_heavy(options.client_threads as u32, options.capacity),
+        WorkloadKind::Exchange => exchange(options.client_threads as u32, options.capacity),
+        WorkloadKind::RapidGrow => rapid_grow(options.client_threads as u32, options.capacity),
     };
 
     workload.operations(options.operations);
-    workload.operations_at_a_stretch(options.ops_st);
+    workload.operations_at_a_stretch(options.ops_per_req as usize);
     workload
 }

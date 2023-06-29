@@ -88,7 +88,6 @@ fn group_data(records: Vec<Record>) -> Groups {
             let first_record = records.get(0).unwrap();
             let average_record = Record {
                 name: name.clone(),
-                no: first_record.no,
                 total_ops: first_record.total_ops,
                 threads,
                 spent: first_record.spent,

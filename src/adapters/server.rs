@@ -5,7 +5,7 @@ use std::task::ready;
 
 use bustle::*;
 
-pub struct ServerTable<K>(Option<TcpStream>, K, usize);
+pub struct ServerTable<K>(Option<TcpStream>, K);
 
 impl<K> Collection for ServerTable<K>
 where
@@ -14,28 +14,20 @@ where
     type Handle = Self;
 
     fn with_capacity(_capacity: usize) -> Self {
-        Self(None, 0.into(), 1)
+        Self(None, 0.into())
     }
 
-    fn with_capacity_and_threads(capacity: usize, no_of_threads: usize) -> Self {
+    fn with_capacity_additional_params(capacity: usize, additional_params: Vec<u8>) -> Self {
         let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let command = format!("{} {} {}\n", capacity, no_of_threads, 1);
-        write_string(&mut stream, command);
+        let formatted_params = format!("{} \n", additional_params.iter().map(|&x| x.to_string()).collect::<Vec<String>>().join(" "));
+        write_string(&mut stream, formatted_params);
         drop(stream);
-        Self(None, 0.into(), 1)
-    }
-
-    fn with_capacity_and_threads_and_ops_st(capacity: usize, no_of_threads: usize, ops_st: usize) -> Self {
-        let mut stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        let command = format!("{} {} {}\n", capacity, no_of_threads, ops_st);
-        write_string(&mut stream, command);
-        drop(stream);
-        Self(None, 0.into(), ops_st)
+        Self(None, 0.into())
     }
 
     fn pin(&self) -> Self::Handle {
         let stream = TcpStream::connect("0.0.0.0:7879").unwrap();
-        Self(Some(stream), 0.into(), self.2)
+        Self(Some(stream), 0.into())
     }
 }
 
@@ -107,15 +99,19 @@ where
 
     fn execute(&mut self, operations: Vec<u8>, keys: Vec<&u64>) -> Vec<bool> {
         let mut stream = self.0.as_mut().expect("TCPSTREAM SHOULD BE FOUND");
-        let mut command = vec![0u8; 9 * self.2];
+        let ops_per_req = operations.len();
+        let mut command = vec![0u8; 9 * ops_per_req];
         for index in 0..operations.len() {
+            if (operations[index] == 0) {
+                break;
+            }
             let start_index = 9 * index;
             let end_index = 9 * index + 9;
             command[9 * index] = operations[index];
             command.splice((start_index + 1)..end_index, keys[index].to_be_bytes());
         }
         stream.write(&command);
-        let mut buf = vec![0u8; self.2];
+        let mut buf = vec![0u8; ops_per_req];
         let result = stream.read_exact(&mut buf);
         let mut results = vec![];
         for error_code in buf {

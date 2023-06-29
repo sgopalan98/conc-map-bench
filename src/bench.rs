@@ -18,9 +18,13 @@ pub struct Options {
     #[structopt(short, long, default_value = "1")]
     pub times: u8,
     #[structopt(short, long, default_value = "1")]
-    pub ops_st: usize,
+    pub ops_per_req: u8,
+    #[structopt(short, long, default_value = "1")]
+    pub server_threads: u8,
+    #[structopt(long, default_value = "")]
+    pub maptype: String,
     #[structopt(long)]
-    pub threads: Option<Vec<u32>>,
+    pub client_threads: u8,
     #[structopt(long)]
     pub use_std_hasher: bool,
     #[structopt(long, default_value = "2000")]
@@ -44,9 +48,9 @@ fn gc_cycle(options: &Options) {
     }
 }
 
-type Handler = Box<dyn FnMut(&str, u8, u32, &Measurement)>;
+type Handler = Box<dyn FnMut(&str, u32, &Measurement)>;
 
-fn case<C>(name: &str, options: &Options, handler: &mut Handler)
+fn case<C>(name: &str, options: &Options, handler: &mut Handler, additional_params: Option<Vec<u8>>)
 where
     C: Collection,
     <C::Handle as CollectionHandle>::Key: Send + Debug,
@@ -63,53 +67,52 @@ where
         println!("-- {}", name);
     }
 
-    let threads = options
-        .threads
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| (1..(num_cpus::get() * 3 / 2) as u32).collect());
+    let threads = options.client_threads;
 
-    let mut first_throughput = None;
+    // let mut first_throughput = None;
 
-    let times = options.times;
+    // let times = options.times;
 
-    for no in 1..=times {
-        for n in &threads {
-            let m = workloads::create(options, *n).run_silently::<C>();
-            handler(name, no, *n, &m);
+    
+    let m = workloads::create(options).run_silently::<C>(additional_params);
+    handler(name, threads as u32, &m);
 
-            if !options.complete_slow {
-                let threshold = *first_throughput.get_or_insert(m.throughput) / 5.;
-                if m.throughput <= threshold {
-                    println!("too long, skipped");
-                    break;
-                }
-            }
 
-            gc_cycle(options);
-        }
-    }
+    gc_cycle(options);
     println!();
 }
 
+fn construct_shared_memory_params(options: &Options) -> Vec<u8> {
+    let mut params = vec![];
+    params.push(options.capacity);
+    params.push(options.client_threads);
+    params.push(options.ops_per_req);
+    return params;
+}
+
+fn construct_delegation_params(options: &Options) -> Vec<u8> {
+    let mut params = vec![];
+    params.push(options.capacity);
+    params.push(options.client_threads);
+    params.push(options.ops_per_req);
+    params.push(options.server_threads);
+    return params;
+}
+
 fn run(options: &Options, h: &mut Handler) {
-    // case::<CrossbeamSkipMapTable<u64>>("CrossbeamSkipMap", options, h);
-    // case::<RwLockBTreeMapTable<u64>>("RwLock<BTreeMap>", options, h);
-    case::<ServerTable<u64>>("Server", options, h);
-    // if options.use_std_hasher {
-    //     case::<RwLockStdHashMapTable<u64, RandomState>>("RwLock<StdHashMap>", options, h);
-    //     case::<DashMapTable<u64, RandomState>>("DashMap", options, h);
-    //     case::<LeapfrogMapTable<u64, RandomState>>("LeapMap", options, h);
-    //     case::<FlurryTable<u64, RandomState>>("Flurry", options, h);
-    //     case::<EvmapTable<u64, RandomState>>("Evmap", options, h);
-    //     case::<CHashMapTable<u64>>("CHashMap", options, h);
-    // } else {
-    //     case::<RwLockStdHashMapTable<u64, FxBuildHasher>>("RwLock<FxHashMap>", options, h);
-    //     case::<LeapfrogMapTable<u64, FxBuildHasher>>("FxLeapMap", options, h);
-    //     case::<DashMapTable<u64, FxBuildHasher>>("FxDashMap", options, h);
-    //     case::<FlurryTable<u64, FxBuildHasher>>("FxFlurry", options, h);
-    //     case::<EvmapTable<u64, FxBuildHasher>>("FxEvmap", options, h);
-    // }
+    match options.maptype.as_str() {
+        "Dashmap" => {
+            let params = construct_shared_memory_params(options);
+            case::<ServerTable<u64>>("DashMapServer", options, h, Some(params));
+        },
+        "Delegation" => {
+            let params = construct_delegation_params(options);
+            case::<ServerTable<u64>>("Delegation Server", options, h, Some(params));
+        },
+        &_ => {
+            
+        }
+    }
 }
 
 pub fn bench(options: &Options) {
@@ -120,24 +123,23 @@ pub fn bench(options: &Options) {
             .has_headers(!options.csv_no_headers)
             .from_writer(io::stderr());
 
-        Box::new(move |name: &str, no: u8, n, m: &Measurement| {
+        Box::new(move |name: &str, n, m: &Measurement| {
             wr.serialize(Record {
                 name: name.into(),
-                no,
                 total_ops: m.total_ops,
                 threads: n,
-                spent: m.spent,
-                throughput: m.throughput,
+                spent: m.spent.as_secs_f64(),
+                throughput: m.throughput / 10f64.powi(6),
                 latency: m.latency,
             })
             .expect("cannot serialize");
             wr.flush().expect("cannot flush");
         }) as Handler
     } else {
-        Box::new(|_: &str, no, n, m: &Measurement| {
+        Box::new(|_: &str, n, m: &Measurement| {
             eprintln!(
-                "experiment_no={}\ttotal_ops={}\tthreads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
-                no, m.total_ops, n, m.spent, m.latency, m.throughput,
+                "total_ops={}\tthreads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
+                m.total_ops, n, m.spent, m.latency, m.throughput,
             )
         }) as Handler
     };
