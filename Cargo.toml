@@ -19,7 +19,7 @@ evmap = "10.0.2"
 seize = "0.2.1"
 crossbeam-skiplist = { git = "https://github.com/crossbeam-rs/crossbeam" }
 leapfrog = { git = "https://github.com/robclu/leapfrog" }
-bustle = { git = "https://github.com/sgopalan98/bustle", branch = "multiple_operations_additional_params" }
+bustle = { git = "https://github.com/sgopalan98/bustle", branch = "multiple_operations_v2" }
 structopt = "0.3.25"
 json = "0.12.4"
 csv = "1.1.6"

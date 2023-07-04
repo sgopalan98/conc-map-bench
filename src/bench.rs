@@ -1,5 +1,6 @@
 use std::collections::hash_map::RandomState;
 use std::{fmt::Debug, io, thread::sleep, time::Duration};
+use serde::{Deserialize, Serialize};
 
 use bustle::*;
 use fxhash::FxBuildHasher;
@@ -7,17 +8,27 @@ use structopt::StructOpt;
 
 use crate::{adapters::*, record::Record, workloads};
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum KeyValueType {
+    Int,
+    Float,
+    String,
+    // Add more types as needed
+}
+
 #[derive(Debug, StructOpt)]
 pub struct Options {
     #[structopt(short, long)]
     pub workload: workloads::WorkloadKind,
+    #[structopt(short, long, default_value = "")]
+    pub server_address: f64,
     #[structopt(short, long, default_value = "1")]
     pub operations: f64,
     #[structopt(short, default_value = "15")]
     pub capacity: u8,
     #[structopt(short, long, default_value = "1")]
     pub times: u8,
-    #[structopt(short, long, default_value = "1")]
+    #[structopt(short, long, default_value = 1)]
     pub ops_per_req: u8,
     #[structopt(short, long, default_value = "1")]
     pub server_threads: u8,
@@ -50,7 +61,7 @@ fn gc_cycle(options: &Options) {
 
 type Handler = Box<dyn FnMut(&str, u32, &Measurement)>;
 
-fn case<C>(name: &str, options: &Options, handler: &mut Handler, additional_params: Option<Vec<u8>>)
+fn case<C>(name: &str, options: &Options, handler: &mut Handler)
 where
     C: Collection,
     <C::Handle as CollectionHandle>::Key: Send + Debug,
@@ -67,15 +78,30 @@ where
         println!("-- {}", name);
     }
 
-    let threads = options.client_threads;
-
-    // let mut first_throughput = None;
-
-    // let times = options.times;
+    let server_address = options.server_address;
+    let client_threads = options.client_threads;
+    let server_threads = options.server_threads;
+    let server_threads = options.server_threads;
+    let ops_per_req = options.ops_per_req;
+    let capacity = options.capacity;
 
     
-    let m = workloads::create(options).run_silently::<C>(additional_params);
-    handler(name, threads as u32, &m);
+    // Create server table
+
+    let table_server = ServerTable {
+        server_settings: ServerSettings{
+            address: server_address,
+            client_threads,
+            server_threads,
+            ops_per_req,
+            key_type: KeyValueType::Int,
+            value_type: KeyValueType::Int,
+            capacity,
+        },
+        stream: None,
+    };
+    let m = workloads::create(options).run_silently::<C>(table_server);
+    handler(name, client_threads as u32, &m);
 
 
     gc_cycle(options);
@@ -102,12 +128,10 @@ fn construct_delegation_params(options: &Options) -> Vec<u8> {
 fn run(options: &Options, h: &mut Handler) {
     match options.maptype.as_str() {
         "Dashmap" => {
-            let params = construct_shared_memory_params(options);
-            case::<ServerTable<u64>>("DashMapServer", options, h, Some(params));
+            case::<ServerTable<u64>>("DashMapServer", options, h);
         },
         "Delegation" => {
-            let params = construct_delegation_params(options);
-            case::<ServerTable<u64>>("Delegation Server", options, h, Some(params));
+            case::<ServerTable<u64>>("Delegation Server", options, h);
         },
         &_ => {
             

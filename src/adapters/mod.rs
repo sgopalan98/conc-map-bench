@@ -3,8 +3,7 @@
 //     crossbeam_skiplist::CrossbeamSkipMapTable, dashmap::DashMapTable, evmap::EvmapTable,
 //     flurry::FlurryTable, std::RwLockStdHashMapTable, server::ServerTable, leapfrog::LeapfrogMapTable
 // };
-pub use self::server::ServerTable;
-
+pub use self::{server::ServerTable, server::ServerSettings};
 // mod btreemap;
 // mod chashmap;
 // mod contrie;
