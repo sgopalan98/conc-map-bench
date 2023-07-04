@@ -10,9 +10,8 @@ use crate::{adapters::*, record::Record, workloads};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum KeyValueType {
-    Int,
-    Float,
-    String,
+    Int(u64),
+    String(String),
     // Add more types as needed
 }
 
@@ -21,21 +20,21 @@ pub struct Options {
     #[structopt(short, long)]
     pub workload: workloads::WorkloadKind,
     #[structopt(short, long, default_value = "")]
-    pub server_address: f64,
+    pub server_address: String,
     #[structopt(short, long, default_value = "1")]
     pub operations: f64,
     #[structopt(short, default_value = "15")]
-    pub capacity: u8,
+    pub capacity: usize,
     #[structopt(short, long, default_value = "1")]
     pub times: u8,
-    #[structopt(short, long, default_value = 1)]
-    pub ops_per_req: u8,
     #[structopt(short, long, default_value = "1")]
-    pub server_threads: u8,
+    pub ops_per_req: usize,
+    #[structopt(short, long, default_value = "1")]
+    pub server_threads: usize,
     #[structopt(long, default_value = "")]
     pub maptype: String,
     #[structopt(long)]
-    pub client_threads: u8,
+    pub client_threads: usize,
     #[structopt(long)]
     pub use_std_hasher: bool,
     #[structopt(long, default_value = "2000")]
@@ -78,7 +77,7 @@ where
         println!("-- {}", name);
     }
 
-    let server_address = options.server_address;
+    let server_address = options.server_address.clone();
     let client_threads = options.client_threads;
     let server_threads = options.server_threads;
     let server_threads = options.server_threads;
@@ -86,21 +85,15 @@ where
     let capacity = options.capacity;
 
     
-    // Create server table
+    // Create network settings
 
-    let table_server = ServerTable {
-        server_settings: ServerSettings{
-            address: server_address,
-            client_threads,
-            server_threads,
-            ops_per_req,
-            key_type: KeyValueType::Int,
-            value_type: KeyValueType::Int,
-            capacity,
-        },
-        stream: None,
+    let network_config = NetworkConfig {
+        address: server_address,
+        client_threads,
+        server_threads,
+        ops_per_req,
     };
-    let m = workloads::create(options).run_silently::<C>(table_server);
+    let m = workloads::create(options).run_silently::<C>(Some(network_config));
     handler(name, client_threads as u32, &m);
 
 
@@ -108,30 +101,14 @@ where
     println!();
 }
 
-fn construct_shared_memory_params(options: &Options) -> Vec<u8> {
-    let mut params = vec![];
-    params.push(options.capacity);
-    params.push(options.client_threads);
-    params.push(options.ops_per_req);
-    return params;
-}
-
-fn construct_delegation_params(options: &Options) -> Vec<u8> {
-    let mut params = vec![];
-    params.push(options.capacity);
-    params.push(options.client_threads);
-    params.push(options.ops_per_req);
-    params.push(options.server_threads);
-    return params;
-}
 
 fn run(options: &Options, h: &mut Handler) {
     match options.maptype.as_str() {
         "Dashmap" => {
-            case::<ServerTable<u64>>("DashMapServer", options, h);
+            case::<ServerTable>("DashMapServer", options, h);
         },
         "Delegation" => {
-            case::<ServerTable<u64>>("Delegation Server", options, h);
+            case::<ServerTable>("Delegation Server", options, h);
         },
         &_ => {
             

@@ -68,9 +68,9 @@ fn exchange(threads: u32, capacity: u8) -> Workload {
 
 pub(crate) fn create(options: &Options) -> Workload {
     let mut workload = match options.workload {
-        WorkloadKind::ReadHeavy => read_heavy(options.client_threads as u32, options.capacity),
-        WorkloadKind::Exchange => exchange(options.client_threads as u32, options.capacity),
-        WorkloadKind::RapidGrow => rapid_grow(options.client_threads as u32, options.capacity),
+        WorkloadKind::ReadHeavy => read_heavy(options.client_threads as u32, options.capacity as u8),
+        WorkloadKind::Exchange => exchange(options.client_threads as u32, options.capacity as u8),
+        WorkloadKind::RapidGrow => rapid_grow(options.client_threads as u32, options.capacity as u8),
     };
 
     workload.operations(options.operations);

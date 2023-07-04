@@ -90,7 +90,7 @@ checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
 [[package]]
 name = "bustle"
 version = "0.5.1"
-source = "git+https://github.com/sgopalan98/bustle?branch=multiple_operations_v2#c8418502a8de20836379590028ec805d1201b26c"
+source = "git+https://github.com/sgopalan98/bustle?branch=multiple_operations_v2#ac8cf82d7b3a719d43fa077ca9179397741ee885"
 dependencies = [
  "rand 0.8.5",
  "scopeguard",
@@ -203,6 +203,7 @@ dependencies = [
  "plotters",
  "seize",
  "serde",
+ "serde_json",
  "structopt",
  "tracing-subscriber",
 ]
@@ -1247,6 +1248,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.23",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.99"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46266871c240a00b8f503b877622fe33430b3c7d963bdc0f2adc511e54a1eae3"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
 ]
 
 [[package]]

@@ -2,10 +2,29 @@ use std::hash::Hash;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
 use bustle::*;
 
 use crate::bench::KeyValueType;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HandShakeRequest {
+    client_threads: usize,
+    server_threads: usize,
+    ops_per_req: usize,
+    capacity: usize,
+    key_type: KeyValueType,
+    value_type: KeyValueType
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OperationRequests {
+    operations: Vec<Operation>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OperationResults {
+    results: Vec<OperationResult>,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Operation {
@@ -13,56 +32,24 @@ enum Operation {
     Insert { key: KeyValueType, value: KeyValueType },
     Remove { key: KeyValueType },
     Increment { key: KeyValueType },
+    Close
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 enum OperationResult {
-    ReadSuccess(ResultData),
+    ReadSuccess(KeyValueType),
     ReadFailure(String),
-    WriteSuccess(ResultData),
-    WriteFailure(String),
+    InsertNew(KeyValueType),
+    InsertOld(KeyValueType),
+    RemoveSuccess(KeyValueType),
+    RemoveFailure(String),
+    IncrementSuccess(KeyValueType),
+    IncrementFailure(String),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-enum ResultData {
-    String(String),
-    Int(i32),
-    Float(f64),
-    // Add more types as needed
-}
-
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ServerSettings {
-    address: String,
-    client_threads: usize,
-    server_threads: usize,
-    ops_per_req: usize,
-    key_type: KeyValueType,
-    value_type: KeyValueType,
-    capacity: usize
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct ServerTable{
-    server_settings: ServerSettings,
+    network_config: Option<NetworkConfig>,
     stream: Option<TcpStream>
-}
-
-impl ServerTable {
-    fn setup_server(address: String, client_threads: usize, server_threads: usize, ops_per_req: usize, key_type: KeyValueType, value_type: KeyValueType) -> Self {
-        let server_settings = ServerSettings {
-            address,
-            client_threads,
-            server_threads,
-            ops_per_req,
-            key_type,
-            value_type,
-            capacity: 0,
-        };
-        let mut stream = TcpStream::connect(address).expect("Failed to connect to server");
-        return Self(server_settings, Some(stream));
-    }
 }
 
 fn send_request<T: Serialize>(stream: &mut TcpStream, request: &T) {
@@ -70,44 +57,47 @@ fn send_request<T: Serialize>(stream: &mut TcpStream, request: &T) {
     stream.write_all(request_json.as_bytes()).expect("Failed to send request");
 }
 
+fn receive_response(stream: &mut TcpStream) -> OperationResults {
+    let mut buffer = [0; 1024];
+    let bytes_read = stream.read(&mut buffer).unwrap();
+    let response_json = String::from_utf8_lossy(&buffer[..bytes_read]).into_owned();
+    // println!("response json is {}", response_json);
+    serde_json::from_str(&response_json).unwrap()
+}
+
 impl Collection for ServerTable
-where
-    K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
 {
     type Handle = Self;
 
     fn with_capacity(_capacity: usize) -> Self {
-        // this function not used
-        Self(ServerSettings { address: "".to_owned(), client_threads: 0, server_threads: 0, ops_per_req: 0, key_type: 0, value_type: 0, capacity: 0 }, None)
+        // not used
+        Self{network_config: None, stream: None}
     }
 
-    fn reserve(&mut self, additional_capacity: usize) {
-        self.server_settings.capacity = additional_capacity;
-        send_request(&mut self.stream.unwrap(), &self.server_settings);
+    fn in_network_with_capacity(network_config: NetworkConfig, capacity: usize) -> Self {
+        let address = network_config.address.clone();
+        let mut stream = TcpStream::connect(address).unwrap();
+        let handshake_request = HandShakeRequest {
+            client_threads: network_config.client_threads,
+            server_threads: network_config.server_threads,
+            ops_per_req: network_config.ops_per_req,
+            capacity,
+            key_type: KeyValueType::Int(0),
+            value_type: KeyValueType::Int(0)
+        };
+        send_request(&mut stream, &handshake_request);
+        return Self{network_config: Some(network_config.clone()), stream: Some(stream) };
     }
 
     fn pin(&self) -> Self::Handle {
-        let address = self.server_settings.address;
+        let network_config = self.network_config.clone().unwrap();
+        let address = network_config.address.clone();
         let stream = TcpStream::connect(address).unwrap();
-        Self(self.server_settings.clone(), Some(stream))
+        return Self{network_config: Some(network_config), stream: Some(stream) };
     }
 }
 
-pub fn read_command(stream: &mut TcpStream) -> String {
-    let mut input = String::new();
-    let mut reader = BufReader::new(stream);
-    reader.read_line(&mut input).unwrap();
-    let input: String = input.trim().to_owned();
-    return input;
-}
-
-pub fn write_string(stream: &mut TcpStream, output: String) {
-    stream.write(output.as_bytes()).unwrap();
-}
-
 impl CollectionHandle for ServerTable
-where
-    K: Send + Sync + From<u64> + Copy + 'static + Hash + Eq + std::fmt::Debug,
 {
     type Key = u64;
 
@@ -128,20 +118,68 @@ where
     }
 
     fn execute_multiple(&mut self, operation_types: Vec<OperationType>, keys: Vec<&Self::Key>) -> Vec<bool> {
+
+        let mut return_data_available = true;
+        // Send data for operations
         let mut operations = vec![];
         for index in 0..operation_types.len() {
             let operation_type = operation_types[index];
-            let key = keys[index];
             let operation = match operation_type {
-                OperationType::Read => Operation::Read { key },
-                OperationType::Insert => Operation::Insert { key, value: 0 },
-                OperationType::Remove => Operation::Remove { key },
-                OperationType::Update => Operation::Increment { key},
-                OperationType::Upsert => Operation::Read { key }, // TODO: Change this
+                OperationType::Read => {
+                    let key = keys[index];
+                    Operation::Read { key: KeyValueType::Int(*key) }
+                },
+                OperationType::Insert => {
+                    let key = keys[index];
+                    Operation::Insert { key: KeyValueType::Int(*key), value: KeyValueType::Int(0) }
+                },
+                OperationType::Remove => {
+                    let key = keys[index];
+                    Operation::Remove { key: KeyValueType::Int(*key) }
+                },
+                OperationType::Update => {
+                    let key = keys[index];
+                    Operation::Increment { key: KeyValueType::Int(*key)}
+                },
+                OperationType::Upsert => {
+                    let key = keys[index];
+                    Operation::Read { key: KeyValueType::Int(*key) }
+                },
+                OperationType::End => {
+                    return_data_available = false; 
+                    Operation::Close
+                }
             };
             operations.push(operation);
         }
-        let mut stream = self.stream.unwrap();
-        send_request(&mut stream, &operations);
+        let mut stream = self.stream.as_mut().unwrap();
+        let operations_request = OperationRequests{
+            operations
+        };
+        send_request(stream, &operations_request);
+
+        if !return_data_available {
+            return vec![];
+        }
+
+        // Evaulate the results
+        let operation_results = receive_response(&mut stream);
+        let mut result_booleans = vec![];
+        for index in 0..operation_results.results.len() {
+            let operation_result = &operation_results.results[index];
+            // TODO: Check the result and set boolean
+            let result = match operation_result {
+                OperationResult::ReadSuccess(value) => true,
+                OperationResult::ReadFailure(String) => false,
+                OperationResult::InsertNew(_) => true,
+                OperationResult::InsertOld(_) => false,
+                OperationResult::RemoveSuccess(_) => true,
+                OperationResult::RemoveFailure(_) => false,
+                OperationResult::IncrementSuccess(_) => true,
+                OperationResult::IncrementFailure(_) => false,
+            };
+            result_booleans.push(result);
+        }
+        return result_booleans;
     }
 }
