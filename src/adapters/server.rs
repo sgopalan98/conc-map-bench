@@ -39,7 +39,7 @@ enum Operation {
 #[derive(Debug, Serialize, Deserialize)]
 enum OperationResult {
     Success(KeyValueType),
-    Failure
+    Failure(String)
 }
 
 pub struct ServerTable{
@@ -166,13 +166,13 @@ impl CollectionHandle for ServerTable
             let result = match operation_type {
                 OperationType::Read | OperationType::Remove | OperationType::Update => match operation_result {
                     OperationResult::Success(_) => true,
-                    OperationResult::Failure => false,
+                    OperationResult::Failure(_) => false,
                 },
                 OperationType::Insert => match operation_result {
                     OperationResult::Success(value) => match value {
                         KeyValueType::Int(value) => *value == 0,
                     },
-                    OperationResult::Failure => false
+                    OperationResult::Failure(_) => false
                 },
                 OperationType::End => false,
                 OperationType::Upsert => false,
