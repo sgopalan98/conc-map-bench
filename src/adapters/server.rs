@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use serde::{Deserialize, Serialize};
 use bustle::*;
+use std::mem::size_of_val;
 
 use crate::bench::KeyValueType;
 
@@ -37,14 +38,8 @@ enum Operation {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum OperationResult {
-    ReadSuccess(KeyValueType),
-    ReadFailure(String),
-    InsertNew(KeyValueType),
-    InsertOld(KeyValueType),
-    RemoveSuccess(KeyValueType),
-    RemoveFailure(String),
-    IncrementSuccess(KeyValueType),
-    IncrementFailure(String),
+    Success(KeyValueType),
+    Failure
 }
 
 pub struct ServerTable{
@@ -58,7 +53,7 @@ fn send_request<T: Serialize>(stream: &mut TcpStream, request: &T) {
 }
 
 fn receive_response(stream: &mut TcpStream) -> OperationResults {
-    let mut buffer = [0; 1024];
+    let mut buffer = [0; 1024 * 10];
     let bytes_read = stream.read(&mut buffer).unwrap();
     let response_json = String::from_utf8_lossy(&buffer[..bytes_read]).into_owned();
     // println!("response json is {}", response_json);
@@ -167,16 +162,20 @@ impl CollectionHandle for ServerTable
         let mut result_booleans = vec![];
         for index in 0..operation_results.results.len() {
             let operation_result = &operation_results.results[index];
-            // TODO: Check the result and set boolean
-            let result = match operation_result {
-                OperationResult::ReadSuccess(value) => true,
-                OperationResult::ReadFailure(String) => false,
-                OperationResult::InsertNew(_) => true,
-                OperationResult::InsertOld(_) => false,
-                OperationResult::RemoveSuccess(_) => true,
-                OperationResult::RemoveFailure(_) => false,
-                OperationResult::IncrementSuccess(_) => true,
-                OperationResult::IncrementFailure(_) => false,
+            let operation_type = operation_types[index];
+            let result = match operation_type {
+                OperationType::Read | OperationType::Remove | OperationType::Update => match operation_result {
+                    OperationResult::Success(_) => true,
+                    OperationResult::Failure => false,
+                },
+                OperationType::Insert => match operation_result {
+                    OperationResult::Success(value) => match value {
+                        KeyValueType::Int(value) => *value == 0,
+                    },
+                    OperationResult::Failure => false
+                },
+                OperationType::End => false,
+                OperationType::Upsert => false,
             };
             result_booleans.push(result);
         }

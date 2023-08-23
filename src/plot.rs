@@ -1,222 +1,222 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    error::Error,
-    io,
-    path::PathBuf,
-    time::Duration,
-};
+// use std::{
+//     collections::{BTreeMap, HashMap},
+//     error::Error,
+//     io,
+//     path::PathBuf,
+//     time::Duration,
+// };
 
-use plotters::prelude::*;
-use structopt::StructOpt;
+// use plotters::prelude::*;
+// use structopt::StructOpt;
 
-use crate::record::Record;
+// use crate::record::Record;
 
-const FONT: &str = "Fira Code";
+// const FONT: &str = "Fira Code";
 
-#[derive(Debug, StructOpt)]
-pub struct Options {
-    // <dir>/<name>.throughput.svg
-    // <dir>/<name>.latency.svg
-    dir: PathBuf,
-    name: String,
-    #[structopt(short, long, default_value = "640")]
-    width: u32,
-    #[structopt(short, long, default_value = "480")]
-    height: u32,
-    #[structopt(long, default_value = "2000")]
-    latency_limit_ns: u64,
-}
+// #[derive(Debug, StructOpt)]
+// pub struct Options {
+//     // <dir>/<name>.throughput.svg
+//     // <dir>/<name>.latency.svg
+//     dir: PathBuf,
+//     name: String,
+//     #[structopt(short, long, default_value = "640")]
+//     width: u32,
+//     #[structopt(short, long, default_value = "480")]
+//     height: u32,
+//     #[structopt(long, default_value = "2000")]
+//     latency_limit_ns: u64,
+// }
 
-pub fn plot(options: &Options) {
-    let data = read_data();
-    let data = group_data(data);
-    plot_throughput(options, &data).expect("failed to plot throughput");
-    plot_latency(options, &data).expect("failed to plot latency");
-}
+// pub fn plot(options: &Options) {
+//     let data = read_data();
+//     let data = group_data(data);
+//     plot_throughput(options, &data).expect("failed to plot throughput");
+//     plot_latency(options, &data).expect("failed to plot latency");
+// }
 
-fn read_data() -> Vec<Record> {
-    let rd = io::stdin();
-    let mut rd = csv::Reader::from_reader(rd);
+// fn read_data() -> Vec<Record> {
+//     let rd = io::stdin();
+//     let mut rd = csv::Reader::from_reader(rd);
 
-    rd.deserialize()
-        .map(|result| result.expect("invalid record"))
-        .collect()
-}
+//     rd.deserialize()
+//         .map(|result| result.expect("invalid record"))
+//         .collect()
+// }
 
-type Groups = BTreeMap<String, Vec<Record>>;
-type ThreadGroups = BTreeMap<u32, Vec<Record>>;
+// type Groups = BTreeMap<String, Vec<Record>>;
+// type ThreadGroups = BTreeMap<u32, Vec<Record>>;
 
-fn average(records: &Vec<Record>) -> (f64, Duration) {
-    let throughputs: Vec<f64> = records.iter().map(|record| record.throughput).collect();
-    let latencies: Vec<u128> = records
-        .iter()
-        .map(|record| record.latency.as_millis())
-        .collect();
-    let throughput_average: f64 =
-        throughputs.iter().sum::<f64>() as f64 / throughputs.iter().len() as f64;
-    let latency_average: Duration = Duration::from_millis(
-        latencies.iter().sum::<u128>() as u64 / latencies.iter().len() as u64,
-    );
-    return (throughput_average, latency_average);
-}
+// fn average(records: &Vec<Record>) -> (f64, Duration) {
+//     let throughputs: Vec<f64> = records.iter().map(|record| record.throughput).collect();
+//     let latencies: Vec<u128> = records
+//         .iter()
+//         .map(|record| record.latency.as_millis())
+//         .collect();
+//     let throughput_average: f64 =
+//         throughputs.iter().sum::<f64>() as f64 / throughputs.iter().len() as f64;
+//     let latency_average: Duration = Duration::from_millis(
+//         latencies.iter().sum::<u128>() as u64 / latencies.iter().len() as u64,
+//     );
+//     return (throughput_average, latency_average);
+// }
 
-fn group_data(records: Vec<Record>) -> Groups {
-    let mut inter_groups = Groups::new();
+// fn group_data(records: Vec<Record>) -> Groups {
+//     let mut inter_groups = Groups::new();
 
-    for record in records {
-        let group = inter_groups
-            .entry(record.name.clone())
-            .or_insert_with(Vec::new);
-        group.push(record);
-    }
+//     for record in records {
+//         let group = inter_groups
+//             .entry(record.name.clone())
+//             .or_insert_with(Vec::new);
+//         group.push(record);
+//     }
 
-    let mut groups = Groups::new();
+//     let mut groups = Groups::new();
 
-    for (name, records) in inter_groups {
-        let mut thread_groups = ThreadGroups::new();
-        for record in records {
-            let group = thread_groups
-                .entry(record.threads.clone())
-                .or_insert_with(Vec::new);
-            group.push(record);
-        }
-        for (threads, records) in thread_groups {
-            let average_values = average(&records);
-            let average_throughput = average_values.0;
-            let average_latency = average_values.1;
+//     for (name, records) in inter_groups {
+//         let mut thread_groups = ThreadGroups::new();
+//         for record in records {
+//             let group = thread_groups
+//                 .entry(record.threads.clone())
+//                 .or_insert_with(Vec::new);
+//             group.push(record);
+//         }
+//         for (threads, records) in thread_groups {
+//             let average_values = average(&records);
+//             let average_throughput = average_values.0;
+//             let average_latency = average_values.1;
 
-            let first_record = records.get(0).unwrap();
-            let average_record = Record {
-                name: name.clone(),
-                total_ops: first_record.total_ops,
-                threads,
-                spent: first_record.spent,
-                throughput: average_throughput,
-                latency: average_latency,
-            };
-            let group = groups.entry(name.clone()).or_insert_with(Vec::new);
-            group.push(average_record);
-        }
-    }
+//             let first_record = records.get(0).unwrap();
+//             let average_record = Record {
+//                 name: name.clone(),
+//                 total_ops: first_record.total_ops,
+//                 threads,
+//                 spent: first_record.spent,
+//                 throughput: average_throughput,
+//                 latency: average_latency,
+//             };
+//             let group = groups.entry(name.clone()).or_insert_with(Vec::new);
+//             group.push(average_record);
+//         }
+//     }
 
-    groups
-}
+//     groups
+// }
 
-static COLORS: &[RGBColor] = &[BLUE, RED, GREEN, MAGENTA, CYAN, BLACK, YELLOW];
+// static COLORS: &[RGBColor] = &[BLUE, RED, GREEN, MAGENTA, CYAN, BLACK, YELLOW];
 
-fn plot_throughput(options: &Options, groups: &Groups) -> Result<(), Box<dyn Error>> {
-    let path = format!("{}/{}.throughput.svg", options.dir.display(), options.name);
-    let resolution = (options.width, options.height);
-    let root = SVGBackend::new(&path, resolution).into_drawing_area();
+// fn plot_throughput(options: &Options, groups: &Groups) -> Result<(), Box<dyn Error>> {
+//     let path = format!("{}/{}.throughput.svg", options.dir.display(), options.name);
+//     let resolution = (options.width, options.height);
+//     let root = SVGBackend::new(&path, resolution).into_drawing_area();
 
-    root.fill(&WHITE)?;
+//     root.fill(&WHITE)?;
 
-    let (x_max, y_max) = groups
-        .values()
-        .flatten()
-        .map(|record| (record.threads, record.throughput))
-        .fold((0, 0f64), |res, cur| (res.0.max(cur.0), res.1.max(cur.1)));
+//     let (x_max, y_max) = groups
+//         .values()
+//         .flatten()
+//         .map(|record| (record.threads, record.throughput))
+//         .fold((0, 0f64), |res, cur| (res.0.max(cur.0), res.1.max(cur.1)));
 
-    let mut chart = ChartBuilder::on(&root)
-        .margin(10)
-        .caption(&format!("{}: Throughput", options.name), (FONT, 20))
-        .set_label_area_size(LabelAreaPosition::Left, 70)
-        .set_label_area_size(LabelAreaPosition::Right, 70)
-        .set_label_area_size(LabelAreaPosition::Bottom, 40)
-        .build_cartesian_2d(1..x_max, 0.0..y_max)?;
+//     let mut chart = ChartBuilder::on(&root)
+//         .margin(10)
+//         .caption(&format!("{}: Throughput", options.name), (FONT, 20))
+//         .set_label_area_size(LabelAreaPosition::Left, 70)
+//         .set_label_area_size(LabelAreaPosition::Right, 70)
+//         .set_label_area_size(LabelAreaPosition::Bottom, 40)
+//         .build_cartesian_2d(1..x_max, 0.0..y_max)?;
 
-    chart
-        .configure_mesh()
-        .disable_y_mesh()
-        .x_label_formatter(&|v| format!("{}", v))
-        .y_label_formatter(&|v| format!("{:.2} Mop/s", v / 1_000_000.))
-        .x_labels(20)
-        .y_desc("Throughput")
-        .x_desc("Threads")
-        .draw()?;
+//     chart
+//         .configure_mesh()
+//         .disable_y_mesh()
+//         .x_label_formatter(&|v| format!("{}", v))
+//         .y_label_formatter(&|v| format!("{:.2} Mop/s", v / 1_000_000.))
+//         .x_labels(20)
+//         .y_desc("Throughput")
+//         .x_desc("Threads")
+//         .draw()?;
 
-    let colors = COLORS.iter().cycle();
+//     let colors = COLORS.iter().cycle();
 
-    for (records, color) in groups.values().zip(colors) {
-        chart
-            .draw_series(LineSeries::new(
-                records
-                    .iter()
-                    .map(|record| (record.threads, record.throughput)),
-                color,
-            ))?
-            .label(&records[0].name)
-            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
-    }
+//     for (records, color) in groups.values().zip(colors) {
+//         chart
+//             .draw_series(LineSeries::new(
+//                 records
+//                     .iter()
+//                     .map(|record| (record.threads, record.throughput)),
+//                 color,
+//             ))?
+//             .label(&records[0].name)
+//             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
+//     }
 
-    chart
-        .configure_series_labels()
-        .position(SeriesLabelPosition::UpperLeft)
-        .label_font((FONT, 13))
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+//     chart
+//         .configure_series_labels()
+//         .position(SeriesLabelPosition::UpperLeft)
+//         .label_font((FONT, 13))
+//         .background_style(&WHITE.mix(0.8))
+//         .border_style(&BLACK)
+//         .draw()?;
 
-    Ok(())
-}
+//     Ok(())
+// }
 
-fn plot_latency(options: &Options, groups: &Groups) -> Result<(), Box<dyn Error>> {
-    let path = format!("{}/{}.latency.svg", options.dir.display(), options.name);
-    let resolution = (options.width, options.height);
-    let root = SVGBackend::new(&path, resolution).into_drawing_area();
+// fn plot_latency(options: &Options, groups: &Groups) -> Result<(), Box<dyn Error>> {
+//     let path = format!("{}/{}.latency.svg", options.dir.display(), options.name);
+//     let resolution = (options.width, options.height);
+//     let root = SVGBackend::new(&path, resolution).into_drawing_area();
 
-    root.fill(&WHITE)?;
+//     root.fill(&WHITE)?;
 
-    let (x_max, y_max) = groups
-        .values()
-        .flatten()
-        .map(|record| (record.threads, record.latency))
-        .fold((0, Duration::from_secs(0)), |res, cur| {
-            (res.0.max(cur.0), res.1.max(cur.1))
-        });
+//     let (x_max, y_max) = groups
+//         .values()
+//         .flatten()
+//         .map(|record| (record.threads, record.latency))
+//         .fold((0, Duration::from_secs(0)), |res, cur| {
+//             (res.0.max(cur.0), res.1.max(cur.1))
+//         });
 
-    let y_max = options.latency_limit_ns.min(y_max.as_nanos() as u64);
+//     let y_max = options.latency_limit_ns.min(y_max.as_nanos() as u64);
 
-    let mut chart = ChartBuilder::on(&root)
-        .margin(10)
-        .caption(&format!("{}: Latency", options.name), (FONT, 20))
-        .set_label_area_size(LabelAreaPosition::Left, 70)
-        .set_label_area_size(LabelAreaPosition::Right, 70)
-        .set_label_area_size(LabelAreaPosition::Bottom, 40)
-        .build_cartesian_2d(1..x_max, 0..y_max)?;
+//     let mut chart = ChartBuilder::on(&root)
+//         .margin(10)
+//         .caption(&format!("{}: Latency", options.name), (FONT, 20))
+//         .set_label_area_size(LabelAreaPosition::Left, 70)
+//         .set_label_area_size(LabelAreaPosition::Right, 70)
+//         .set_label_area_size(LabelAreaPosition::Bottom, 40)
+//         .build_cartesian_2d(1..x_max, 0..y_max)?;
 
-    chart
-        .configure_mesh()
-        .disable_y_mesh()
-        .x_label_formatter(&|v| format!("{}", v))
-        .y_label_formatter(&|v| format!("{:.0} ns", v))
-        .x_labels(20)
-        .y_labels(20)
-        .y_desc("Latency")
-        .x_desc("Threads")
-        .draw()?;
+//     chart
+//         .configure_mesh()
+//         .disable_y_mesh()
+//         .x_label_formatter(&|v| format!("{}", v))
+//         .y_label_formatter(&|v| format!("{:.0} ns", v))
+//         .x_labels(20)
+//         .y_labels(20)
+//         .y_desc("Latency")
+//         .x_desc("Threads")
+//         .draw()?;
 
-    let colors = COLORS.iter().cycle();
+//     let colors = COLORS.iter().cycle();
 
-    for (records, color) in groups.values().zip(colors) {
-        chart
-            .draw_series(LineSeries::new(
-                records
-                    .iter()
-                    .map(|record| (record.threads, record.latency.as_nanos() as u64)),
-                color,
-            ))?
-            .label(&records[0].name)
-            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
-    }
+//     for (records, color) in groups.values().zip(colors) {
+//         chart
+//             .draw_series(LineSeries::new(
+//                 records
+//                     .iter()
+//                     .map(|record| (record.threads, record.latency.as_nanos() as u64)),
+//                 color,
+//             ))?
+//             .label(&records[0].name)
+//             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
+//     }
 
-    chart
-        .configure_series_labels()
-        .position(SeriesLabelPosition::UpperLeft)
-        .label_font((FONT, 13))
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+//     chart
+//         .configure_series_labels()
+//         .position(SeriesLabelPosition::UpperLeft)
+//         .label_font((FONT, 13))
+//         .background_style(&WHITE.mix(0.8))
+//         .border_style(&BLACK)
+//         .draw()?;
 
-    Ok(())
-}
+//     Ok(())
+// }

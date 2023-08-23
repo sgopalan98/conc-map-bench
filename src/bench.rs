@@ -11,7 +11,7 @@ use crate::{adapters::*, record::Record, workloads};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum KeyValueType {
     Int(u64),
-    String(String),
+    // String(String),
     // Add more types as needed
 }
 
@@ -58,7 +58,7 @@ fn gc_cycle(options: &Options) {
     }
 }
 
-type Handler = Box<dyn FnMut(&str, u32, &Measurement)>;
+type Handler = Box<dyn FnMut(&str, usize, usize, usize, &Measurement)>;
 
 fn case<C>(name: &str, options: &Options, handler: &mut Handler)
 where
@@ -94,7 +94,7 @@ where
         ops_per_req,
     };
     let m = workloads::create(options).run_silently::<C>(Some(network_config));
-    handler(name, client_threads as u32, &m);
+    handler(name, ops_per_req, server_threads, client_threads, &m);
 
 
     gc_cycle(options);
@@ -124,11 +124,13 @@ pub fn bench(options: &Options) {
             .has_headers(!options.csv_no_headers)
             .from_writer(io::stderr());
 
-        Box::new(move |name: &str, n, m: &Measurement| {
+        Box::new(move |name: &str, ops_per_req, server_threads, client_threads, m: &Measurement| {
             wr.serialize(Record {
                 name: name.into(),
                 total_ops: m.total_ops,
-                threads: n,
+                ops_per_req,
+                client_threads,
+                server_threads,
                 spent: m.spent.as_secs_f64(),
                 throughput: m.throughput / 10f64.powi(6),
                 latency: m.latency,
@@ -137,10 +139,10 @@ pub fn bench(options: &Options) {
             wr.flush().expect("cannot flush");
         }) as Handler
     } else {
-        Box::new(|_: &str, n, m: &Measurement| {
+        Box::new(|_: &str, ops_per_req, server_threads, client_threads, m: &Measurement| {
             eprintln!(
-                "total_ops={}\tthreads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
-                m.total_ops, n, m.spent, m.latency, m.throughput,
+                "total_ops={}\tops_per_req={}\tclient_threads={}\tserver_threads={}\tspent={:.1?}\tlatency={:?}\tthroughput={:.0}op/s",
+                m.total_ops, ops_per_req, client_threads, server_threads, m.spent, m.latency, m.throughput,
             )
         }) as Handler
     };

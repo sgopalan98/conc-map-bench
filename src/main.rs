@@ -11,7 +11,7 @@ mod workloads;
 #[derive(Debug, StructOpt)]
 enum Options {
     Bench(bench::Options),
-    Plot(plot::Options),
+    // Plot(plot::Options),
 }
 
 fn main() {
@@ -19,6 +19,6 @@ fn main() {
 
     match Options::from_args() {
         Options::Bench(options) => bench::bench(&options),
-        Options::Plot(options) => plot::plot(&options),
+        // Options::Plot(options) => plot::plot(&options),
     }
 }

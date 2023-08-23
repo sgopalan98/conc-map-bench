@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 pub struct Record {
     pub name: String,
     pub total_ops: u64,
-    pub threads: u32,
+    pub ops_per_req: usize,
+    pub client_threads: usize,
+    pub server_threads: usize,
     pub spent: f64,
     pub throughput: f64,
     #[serde(with = "timestamp")]
