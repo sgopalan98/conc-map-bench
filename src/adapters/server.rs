@@ -48,16 +48,18 @@ pub struct ServerTable{
 }
 
 fn send_request<T: Serialize>(stream: &mut TcpStream, request: &T) {
-    let request_json = serde_json::to_string(&request).expect("Failed to serialize request");
-    stream.write_all(request_json.as_bytes()).expect("Failed to send request");
+    // let request_json = serde_json::to_string(&request).expect("Failed to serialize request");
+    let request_bytes = bincode::serialize(&request).unwrap();
+    stream.write_all(&request_bytes).expect("Failed to send request");
 }
 
 fn receive_response(stream: &mut TcpStream) -> OperationResults {
     let mut buffer = [0; 1024 * 10];
     let bytes_read = stream.read(&mut buffer).unwrap();
-    let response_json = String::from_utf8_lossy(&buffer[..bytes_read]).into_owned();
-    // println!("response json is {}", response_json);
-    serde_json::from_str(&response_json).unwrap()
+    // let response_json = String::from_utf8_lossy(&buffer[..bytes_read]).into_owned();
+    // serde_json::from_str(&response_json).unwrap()
+    let response = bincode::deserialize(&buffer).unwrap();
+    return response;
 }
 
 impl Collection for ServerTable
